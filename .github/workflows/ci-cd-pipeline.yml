@@ -43,12 +43,22 @@ jobs:
         curl -I http://localhost:3000
 
 
-    # Étape 5 :  Ajouter les tests de sécurité avec CodeQL (SAST)
-
+    # Étape 5 : Ajouter les tests de sécurité avec CodeQL (SAST)
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
       with:
         languages: javascript
 
+    # Étape 6 : Exécuter l'analyse de CodeQL
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Utilisation du token GitHub pour l'authentification
+
+    # Étape 7 : Télécharger les résultats de l'analyse CodeQL (SARIF)
+    - name: Upload CodeQL Results to GitHub
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ./results/javascript.sarif
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Ajout du token pour uploader les résultats
