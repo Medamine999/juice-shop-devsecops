@@ -1,0 +1,29 @@
+name: CI/CD Pipeline for OWASP Juice Shop
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  setup-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Étape 1 : Vérification du dépôt
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Étape 2 : Télécharger et exécuter l'image Docker de Juice Shop
+    - name: Pull and Run OWASP Juice Shop Docker Image
+      run: |
+        docker pull bkimminich/juice-shop
+        docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
+
+    # Étape 3 : Vérification que l'application fonctionne
+    - name: Verify Application is Running
+      run: |
+        curl -I http://localhost:3000
