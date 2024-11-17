@@ -60,11 +60,7 @@ jobs:
     - name: Checkout repository (again for snyk analysis)
       uses: actions/checkout@v3
 
-    # Étape 7 : Installer les dépendances Node.js (pour Snyk)
-    - name: Install Node.js dependencies
-      run: npm install
-
-    # Étape 8 : Installer et exécuter Snyk pour détecter les vulnérabilités
+    # Étape 7 : Exécuter Snyk directement pour détecter les vulnérabilités
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/node@master
       env:
