@@ -56,13 +56,23 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-    # Étape 6 : Analyse Snyk
+    # Étape 6 : Analyse des vulnérabilités avec Snyk
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Lister les fichiers pour vérifier leur présence
+    - name: List files in project directory
+      run: ls -la
+
+    # Étape pour installer les dépendances Node.js
+    - name: Install Node.js dependencies
+      run: npm install
+
     # Installer Snyk
     - name: Setup Snyk
-      uses: snyk/actions/setup@master
+      uses: snyk/actions/setup@v2
+      with:
+        version: 'latest'
 
     # Lancer le test Snyk
     - name: Run Snyk Test
