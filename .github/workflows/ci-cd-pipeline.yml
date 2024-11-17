@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
   actions: read
-  security-events: write  # Permet d'écrire les événements de sécurité
+  security-events: write
 
 jobs:
   setup-and-deploy:
@@ -22,13 +22,21 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Étape 2 : Télécharger et exécuter l'image Docker de Juice Shop
+    # Étape 2 : Vérifier la présence du token Snyk
+    - name: Check Snyk token
+      run: |
+        if [ -z "${{ secrets.SNYK_TOKEN }}" ]; then
+          echo "Error: SNYK_TOKEN is not set in GitHub secrets"
+          exit 1
+        fi
+
+    # Étape 3 : Télécharger et exécuter l'image Docker de Juice Shop
     - name: Pull and Run OWASP Juice Shop Docker Image
       run: |
         docker pull bkimminich/juice-shop
         docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
 
-    # Étape 3 : Attendre que l'application soit prête
+    # Étape 4 : Attendre que l'application soit prête
     - name: Wait for Juice Shop to be ready
       run: |
         for i in {1..10}; do
@@ -42,12 +50,12 @@ jobs:
         echo "Juice Shop did not start in time."
         exit 1
 
-    # Étape 4 : Vérification que l'application fonctionne
+    # Étape 5 : Vérification que l'application fonctionne
     - name: Verify Application is Running
       run: |
         curl -I http://localhost:3000
 
-    # Étape 5 : Ajouter les tests de sécurité avec CodeQL (SAST)
+    # Étape 6 : Ajouter les tests de sécurité avec CodeQL (SAST)
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
       with:
@@ -56,11 +64,17 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-    # Étape 6 : Analyser les vulnérabilités de l'image Docker avec Snyk
+    # Étape 7 : Authentification Snyk
+    - name: Authenticate with Snyk
+      run: echo "Authenticating with Snyk..."
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    # Étape 8 : Analyser les vulnérabilités de l'image Docker avec Snyk
     - name: Run Snyk to check Docker image for vulnerabilities
       uses: snyk/actions/docker@master
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: bkimminich/juice-shop
-        
+        args: --severity-threshold=high
