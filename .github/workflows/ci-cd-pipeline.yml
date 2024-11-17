@@ -41,3 +41,14 @@ jobs:
     - name: Verify Application is Running
       run: |
         curl -I http://localhost:3000
+
+
+    # Étape 5 :  Ajouter les tests de sécurité avec CodeQL (SAST)
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: javascript
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
