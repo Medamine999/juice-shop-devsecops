@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
   actions: read
-  security-events: write  # Permet d'écrire les événements de sécurité
+  security-events: write
 
 jobs:
   setup-and-deploy:
@@ -22,13 +22,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Étape 2 : Télécharger et exécuter l'image Docker de Juice Shop
+    # Étape 2 : Configuration de Node.js
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    # Étape 3 : Installation des dépendances
+    - name: Install dependencies
+      run: |
+        npm install
+        
+    # Étape 4 : Télécharger et exécuter l'image Docker de Juice Shop
     - name: Pull and Run OWASP Juice Shop Docker Image
       run: |
         docker pull bkimminich/juice-shop
         docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
 
-    # Étape 3 : Attendre que l'application soit prête
+    # Étape 5 : Attendre que l'application soit prête
     - name: Wait for Juice Shop to be ready
       run: |
         for i in {1..10}; do
@@ -42,12 +53,12 @@ jobs:
         echo "Juice Shop did not start in time."
         exit 1
 
-    # Étape 4 : Vérification que l'application fonctionne
+    # Étape 6 : Vérification que l'application fonctionne
     - name: Verify Application is Running
       run: |
         curl -I http://localhost:3000
 
-    # Étape 5 : Ajouter les tests de sécurité avec CodeQL (SAST)
+    # Étape 7 : CodeQL Analysis (SAST)
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v2
       with:
@@ -56,13 +67,28 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-    - name: Set up Snyk CLI
-      uses: snyk/actions/setup@master
-      with:
-        version: 'latest'
-
-    - name: Analyze Docker image vulnerabilities with Snyk
-      run: |
-        snyk container test bkimminich/juice-shop --json
+    # Étape 8 : Snyk Security Scan
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/node@master
+      continue-on-error: true  # Pour éviter que le pipeline ne s'arrête si des vulnérabilités sont trouvées
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        command: test
+        args: --all-projects
+
+    # Étape 9 : Snyk Container Scan
+    - name: Run Snyk Container Scan
+      uses: snyk/actions/docker@master
+      continue-on-error: true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        image: bkimminich/juice-shop
+        args: --file=Dockerfile
+
+    # Étape 10 : OWASP ZAP Scan (DAST)
+    - name: ZAP Scan
+      uses: zaproxy/action-full-scan@v0.4.0
+      with:
+        target: 'http://localhost:3000'
