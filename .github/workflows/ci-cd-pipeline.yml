@@ -70,7 +70,7 @@ jobs:
 
     # Installer Snyk
     - name: Setup Snyk
-      uses: snyk/actions/setup@v2
+      uses: snyk/actions/setup@v1.2.0
       with:
         version: 'latest'
 
