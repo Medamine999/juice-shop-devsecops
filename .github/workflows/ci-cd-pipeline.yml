@@ -58,7 +58,7 @@ jobs:
 
      # Étape 6 : Analyser les vulnérabilités avec Snyk dans l'image Docker
     - name: Run Snyk to check Docker image vulnerabilities
-      uses: snyk/actions/docker@v2
+      uses: snyk/actions/docker@v1
       with:
         image: bkimminich/juice-shop
       env:
