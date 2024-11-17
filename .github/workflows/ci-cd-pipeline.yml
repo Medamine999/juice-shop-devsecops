@@ -56,10 +56,16 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-    # Étape : Analyser les dépendances avec Snyk
-    - name: Run Snyk to check vulnerabilities
-      uses: snyk/actions@v0.5.0
-      with:
-        args: test
+    # Étape 6 : Analyse Snyk
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Installer Snyk
+    - name: Setup Snyk
+      uses: snyk/actions/setup@master
+
+    # Lancer le test Snyk
+    - name: Run Snyk Test
+      run: snyk test
       env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
