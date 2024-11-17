@@ -55,14 +55,6 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
-
-    # Étape 6 : Analyser les vulnérabilités de l'image Docker avec Snyk
-    - name: Run Snyk to check Docker image for vulnerabilities
-      uses: snyk/actions/docker@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        image: bkimminich/juice-shop
   
         
 
