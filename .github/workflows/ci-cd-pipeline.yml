@@ -23,7 +23,21 @@ jobs:
         docker pull bkimminich/juice-shop
         docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
 
-    # Étape 3 : Vérification que l'application fonctionne
+    # Étape 3 : Attendre que l'application soit prête
+    - name: Wait for Juice Shop to be ready
+      run: |
+        for i in {1..10}; do
+          if curl -s http://localhost:3000 > /dev/null; then
+            echo "Juice Shop is ready!"
+            exit 0
+          fi
+          echo "Waiting for Juice Shop to be ready..."
+          sleep 5
+        done
+        echo "Juice Shop did not start in time."
+        exit 1
+
+    # Étape 4 : Vérification que l'application fonctionne
     - name: Verify Application is Running
       run: |
         curl -I http://localhost:3000
