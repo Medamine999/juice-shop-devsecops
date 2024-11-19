@@ -55,23 +55,40 @@ jobs:
 
   # DAST (Dynamic Application Security Testing) using OWASP ZAP
   dast:
+      runs-on: ubuntu-latest
+      needs: setup-and-deploy
+  
+      steps:
+      # Étape 1 : Télécharger et exécuter OWASP ZAP
+      - name: Start OWASP ZAP (Quick Scan Mode)
+        run: |
+          docker run --rm -v $(pwd):/zap/wrk:rw zaproxy/zap-stable zap-baseline.py \
+            -t http://localhost:3000 \
+            -r zap_report.html \
+            -d
+  
+      # Étape 2 : Télécharger le rapport de l'analyse DAST
+      - name: Upload DAST Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: zap_report.html
+  
+
+  
+  snyk-scan:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
 
     steps:
-    # 1. Lancer OWASP ZAP pour tester les vulnérabilités dynamiques sur l'application en cours d'exécution
-    - name: Run DAST scan with OWASP ZAP
-      run: |
-        docker run -p 8090:8090 -i zaproxy/zap-stable zap.sh -daemon -port 8090 -host 0.0.0.0
-        sleep 10 # Attendre que ZAP démarre
-        docker exec zaproxy zap-cli quick-scan --self-contained --url http://localhost:3000
-    # 2. Récupérer les résultats de l'analyse
-    - name: Get ZAP report
-      run: docker exec zaproxy zap-cli report -o zap_report.html
+    # Étape 1 : Vérification du dépôt
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-    # 3. Télécharger le rapport de l'analyse DAST
-    - name: Upload DAST report
-      uses: actions/upload-artifact@v3
+    # Étape 2 : Exécuter Snyk pour vérifier les vulnérabilités de l'image Docker
+    - name: Run Snyk to check Docker image for vulnerabilities
+      uses: snyk/actions/docker@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
-        name: zap-report
-        path: zap_report.html
+        image: bkimminich/juice-shop
