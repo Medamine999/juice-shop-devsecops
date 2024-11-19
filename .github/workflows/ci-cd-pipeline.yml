@@ -66,8 +66,7 @@ jobs:
     # Étape 1 : Télécharger OWASP ZAP Docker Image
     - name: Pull OWASP ZAP Docker Image
       run: |
-        docker pull owasp/zap2docker
-
+        docker pull owasp/zap2docker-stable
 
     # Étape 2 : Lancer un scan avec OWASP ZAP
     - name: Perform DAST with OWASP ZAP
