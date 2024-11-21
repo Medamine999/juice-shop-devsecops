@@ -54,28 +54,32 @@ jobs:
       uses: github/codeql-action/analyze@v2
 
 
-  # DAST (Dynamic Application Security Testing) using OWASP ZAP
+  # DAST (Dynamic Application Security Testing) using OWASP ZAP 
   dast:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
 
     steps:
-    - name: Install OWASP ZAP
-      run: |
-        wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
-        tar -xvf ZAP_2.14.0_Linux.tar.gz
-        cd ZAP_2.14.0
+      - name: Download and Prepare OWASP ZAP
+        run: |
+          wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
+          tar -xvf ZAP_2.14.0_Linux.tar.gz
+          cd ZAP_*  # Use wildcard to match directory
+          pwd
+          ls
 
-    - name: Run ZAP Baseline Scan
-      run: |
-        chmod +x zap.sh
-        ./zap.sh -cmd -quickurl http://localhost:3000 -quickout zap_report.html
+      - name: Run ZAP Baseline Scan
+        run: |
+          cd ZAP_*
+          python3 zap.py -cmd -quickurl http://localhost:3000 -quickout ../zap_report.html
 
-    - name: Upload DAST Report
-      uses: actions/upload-artifact@v3
-      with:
-        name: zap-report
-        path: zap_report.html
+      - name: Upload DAST Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: zap_report.html
+
+
 
   snyk-scan:
     runs-on: ubuntu-latest
