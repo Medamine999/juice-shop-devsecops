@@ -53,28 +53,25 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
-  # DAST (Dynamic Application Security Testing) using OWASP ZAP
   dast:
-    runs-on: ubuntu-latest
-    needs: setup-and-deploy
-  
-    steps:
-    # Étape 1 : Télécharger et exécuter OWASP ZAP en mode rapide
-    - name: Run DAST scan with OWASP ZAP
-      run: |
-        docker pull zaproxy/zap2docker-stable
-        docker run --rm -v $(pwd):/zap/wrk:rw zaproxy/zap2docker-stable zap-baseline.py \
-          -t http://localhost:3000 \
-          -r zap_report.html \
-          -d  # Mode détaillé, mais rapide par défaut
-  
-    # Étape 2 : Télécharger le rapport de l'analyse DAST
-    - name: Upload DAST report
-      uses: actions/upload-artifact@v3
-      with:
-        name: zap-report
-        path: zap_report.html
-  
+   runs-on: ubuntu-latest
+   needs: setup-and-deploy
+   container: 
+     image: owasp/zap2docker-stable
+   steps:
+     - name: Perform ZAP Baseline Scan
+       run: |
+         zap-baseline.py -t http://localhost:3000 \
+         -r zap_report.html \
+         -J zap_report.json
+
+     - name: Upload ZAP Report
+       uses: actions/upload-artifact@v3
+       with:
+         name: zap-report
+         path: |
+           zap_report.html
+           zap_report.json
 
   
   snyk-scan:
