@@ -60,18 +60,17 @@ jobs:
     needs: setup-and-deploy
 
     steps:
-      - name: Download and Prepare OWASP ZAP
+      - name: Install OWASP ZAP
         run: |
           wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2.14.0_Linux.tar.gz
           tar -xvf ZAP_2.14.0_Linux.tar.gz
-          cd ZAP_*  # Use wildcard to match directory
-          pwd
-          ls
+          ls ZAP_2.14.0
 
       - name: Run ZAP Baseline Scan
         run: |
-          cd ZAP_*
-          python3 zap.py -cmd -quickurl http://localhost:3000 -quickout ../zap_report.html
+          docker run -t owasp/zap2docker-stable zap-baseline.py \
+            -t http://localhost:3000 \
+            -r zap_report.html
 
       - name: Upload DAST Report
         uses: actions/upload-artifact@v3
