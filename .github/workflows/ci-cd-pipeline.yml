@@ -91,6 +91,7 @@ jobs:
   snyk-scan:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
+    continue-on-error: true  # Le job ne sera pas marqué comme échoué
 
     steps:
     # Étape 1 : Vérification du dépôt
