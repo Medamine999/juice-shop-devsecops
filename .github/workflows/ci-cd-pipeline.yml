@@ -66,26 +66,38 @@ jobs:
   # DAST (Dynamic Application Security Testing) using OWASP ZAP
   zap_scan:
     runs-on: ubuntu-latest
-    name: Scan and ZIP
-    
+    name: Scan and Save Results
+
     steps:
-      - name: ZAP Scan
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Prepare output directory
+        run: mkdir -p zap-results
+
+      - name: Run ZAP Scan
         uses: zaproxy/action-baseline@v0.13.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'https://www.zaproxy.org'
           allow_issue_writing: false
           fail_action: false
-          
-      - name: Create ZIP
-        run: |
-          zip -r zap-scan-results.zip *.* 
+          cmd_options: '-J zap-results/zap_scan_report.html'
 
-      - name: Upload ZIP
+      - name: Create ZIP of results
+        run: zip -j zap-scan-results.zip zap-results/zap_scan_report.html
+
+      - name: Upload results as artifact
         uses: actions/upload-artifact@v3
         with:
           name: zap-scan-results
           path: zap-scan-results.zip
+
+      - name: Upload ZAP logs for debugging
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-logs
+          path: .zap.log
 
   
   snyk-scan:
