@@ -44,14 +44,19 @@ jobs:
         fi
         echo "Application is running."
 
-    # Étape 5 : Ajouter les tests de sécurité avec CodeQL (SAST)
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: javascript
+  # Étape 5 : Ajouter les tests de sécurité avec CodeQL (SAST)
+  CodeQL_Analysis:
+    runs-on: ubuntu-latest
+    name: CodeQL_Analysis
 
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+    steps:
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: javascript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
 
   # DAST (Dynamic Application Security Testing) using OWASP ZAP
   zap_scan:
