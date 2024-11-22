@@ -9,49 +9,42 @@ on:
       - master
 
 permissions:
-  contents: write
+  contents: write  # Nécessaire pour télécharger et enregistrer des artefacts
   actions: read
   security-events: write
 
 jobs:
   setup-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
     # Étape 1 : Vérification du dépôt
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Étape 2 : Configurer Docker et lancer Juice Shop
-    - name: Setup Docker and Run Juice Shop
+    # Étape 2 : Télécharger et exécuter l'image Docker de Juice Shop
+    - name: Pull and Run OWASP Juice Shop Docker Image
       run: |
         docker pull bkimminich/juice-shop
         docker run -d -p 3000:3000 --name juice-shop bkimminich/juice-shop
-        echo "Juice Shop container started."
 
-    # Étape 3 : Attendre que Juice Shop soit prêt
+    # Étape 3 : Attendre que l'application soit prête
     - name: Wait for Juice Shop to be ready
       run: |
-        for i in {1..12}; do
-          if curl -s http://localhost:3000 > /dev/null; then
-            echo "Juice Shop is ready."
-            exit 0
-          fi
-          echo "Waiting for Juice Shop to be ready..."
-          sleep 5
-        done
-        echo "Timeout: Juice Shop did not start."
-        exit 1
+        timeout 60 bash -c \
+        'until curl -s http://localhost:3000 > /dev/null; do echo "Waiting..."; sleep 5; done'
+        echo "Juice Shop is ready!"
 
-    # Étape 4 : Vérification du fonctionnement de l'application
-    - name: Verify Application Status
+    # Étape 4 : Vérification que l'application fonctionne
+    - name: Verify Application is Running
       run: |
-        HTTP_STATUS=$(curl -o /dev/null -s -w '%{http_code}' http://localhost:3000)
-        if [ "$HTTP_STATUS" -ne 200 ]; then
-          echo "Application responded with HTTP status $HTTP_STATUS"
+        if [ "$(curl -o /dev/null -s -w '%{http_code}' http://localhost:3000)" != "200" ]; then
+          echo "Application is not responding with HTTP 200"
           exit 1
         fi
-        echo "Application is running with HTTP 200."
+        echo "Application is running."
 
+  # Ajouter les tests de sécurité avec CodeQL (SAST)
   codeql-analysis:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
@@ -70,55 +63,44 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
 
+  # DAST (Dynamic Application Security Testing) using OWASP ZAP
   zap_scan:
     runs-on: ubuntu-latest
-    needs: setup-and-deploy
+    name: Scan and ZIP
+    
     steps:
-    # Étape 1 : Lancer un scan OWASP ZAP
-    - name: Perform ZAP Scan
-      uses: zaproxy/action-baseline@v0.13.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        target: 'http://localhost:3000'
-        fail_action: false
+      - name: ZAP Scan
+        uses: zaproxy/action-baseline@v0.13.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          target: 'https://www.zaproxy.org'
+          allow_issue_writing: false
+          fail_action: false
+          
+      - name: Create ZIP
+        run: |
+          zip -r zap-scan-results.zip *.* 
 
-    # Étape 2 : Compresser les résultats du scan
-    - name: Archive ZAP Scan Results
-      run: |
-        mkdir -p reports
-        mv *.html reports/
-        zip -r zap-scan-results.zip reports/
+      - name: Upload ZIP
+        uses: actions/upload-artifact@v3
+        with:
+          name: zap-scan-results
+          path: zap-scan-results.zip
 
-    # Étape 3 : Charger les résultats comme artefact
-    - name: Upload ZAP Scan Results
-      uses: actions/upload-artifact@v3
-      with:
-        name: zap-scan-results
-        path: zap-scan-results.zip
-
+  
   snyk-scan:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
+
     steps:
     # Étape 1 : Vérification du dépôt
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Étape 2 : Exécuter Snyk sur l'image Docker
-    - name: Snyk Vulnerability Scan
+    # Étape 2 : Exécuter Snyk pour vérifier les vulnérabilités de l'image Docker
+    - name: Run Snyk to check Docker image for vulnerabilities
       uses: snyk/actions/docker@master
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         image: bkimminich/juice-shop
-
-  cleanup:
-    runs-on: ubuntu-latest
-    needs: [setup-and-deploy, zap_scan, snyk-scan, codeql-analysis]
-    steps:
-    # Étape : Arrêter et supprimer le conteneur Docker
-    - name: Cleanup Docker Container
-      run: |
-        docker stop juice-shop || true
-        docker rm juice-shop || true
-        docker image prune -f
