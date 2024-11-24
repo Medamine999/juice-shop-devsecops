@@ -66,54 +66,54 @@ jobs:
   # DAST (Dynamic Application Security Testing) using OWASP ZAP
   zap_scan:
     runs-on: ubuntu-latest
-    name: Scan and Save Results
-
+    name: Scan and ZIP
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Prepare output directory
-        run: mkdir -p zap-results
-
-      - name: Run ZAP Scan
+      - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.13.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'https://www.zaproxy.org'
           allow_issue_writing: false
           fail_action: false
-          cmd_options: '-J zap-results/zap_scan_report.html'
+          
+      - name: Create ZIP
+        run: |
+          zip -r zap-scan-results.zip *.* 
 
-      - name: Create ZIP of results
-        run: zip -j zap-scan-results.zip zap-results/zap_scan_report.html
-
-      - name: Upload results as artifact
+      - name: Upload ZIP
         uses: actions/upload-artifact@v3
         with:
           name: zap-scan-results
           path: zap-scan-results.zip
 
-      - name: Upload ZAP logs for debugging
-        uses: actions/upload-artifact@v3
-        with:
-          name: zap-logs
-          path: .zap.log
-
   
   snyk-scan:
     runs-on: ubuntu-latest
     needs: setup-and-deploy
-    continue-on-error: true  # Le job ne sera pas marqué comme échoué
 
     steps:
     # Étape 1 : Vérification du dépôt
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Étape 2 : Exécuter Snyk pour vérifier les vulnérabilités de l'image Docker
-    - name: Run Snyk to check Docker image for vulnerabilities
-      uses: snyk/actions/docker@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    # Étape 2 : Installer Snyk CLI
+    - name: Install Snyk CLI
+      run: npm install -g snyk
+
+    # Étape 3 : Authentification Snyk
+    - name: Authenticate Snyk CLI
+      run: snyk auth "${{ secrets.SNYK_TOKEN }}"
+
+    # Étape 4 : Analyse de l'image Docker avec Snyk et enregistrement des résultats
+    - name: Run Snyk Docker scan
+      run: |
+        snyk container test bkimminich/juice-shop --json > snyk-results.json || true
+      continue-on-error: true
+
+    # Étape 5 : Enregistrer les résultats dans les artefacts du workflow
+    - name: Upload Snyk results as artifact
+      uses: actions/upload-artifact@v3
       with:
-        image: bkimminich/juice-shop
+        name: snyk-results
+        path: snyk-results.json
